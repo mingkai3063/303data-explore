@@ -1,0 +1,148 @@
+---
+title: "sta303 data explore"
+output: html_document
+---
+
+```{r setup, message = FALSE, echo=FALSE}
+# Students: You probably shouldn't change any of the code in this chunk.
+
+# These are the packages you will need for this activity
+packages_needed <- c("tidyverse", "googledrive", "readxl", "janitor", 
+                     "lubridate", "opendatatoronto", "ggthemes")
+
+package.check <- lapply(
+  packages_needed,
+  FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+    }
+  }
+)
+
+# Credit: package.check based on a helpful post from Vikram Baliga https://vbaliga.github.io/verify-that-r-packages-are-installed-and-loaded/
+
+# Load tidyverse
+library(tidyverse)
+library(readxl)
+library(janitor)
+library(opendatatoronto)
+library(ggthemes)
+
+# Set so that long lines in R will be wrapped:
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=80), echo = FALSE)
+```
+
+```{r}
+date_daily <- read_excel("Desktop/CityofToronto_COVID-19_Daily_Public_Reporting.xlsx", sheet = 1) %>% 
+  clean_names()
+```
+
+
+# Task 1: Daily cases
+## Data wrangling
+
+```{r}
+reported_raw<-read_excel("Desktop/CityofToronto_COVID-19_Daily_Public_Reporting.xlsx", sheet = 5)%>%
+  clean_names()
+reported_raw
+```
+```{r}
+reported<-reported_raw%>%
+  mutate_if(is.numeric, replace_na, replace = 0)
+reported$reported_date<-date(reported$reported_date)
+reported_tidy<-reported%>%
+  pivot_longer(-c(reported_date),names_to="status", values_to="number")
+reported_tidy$status<-str_to_sentence(reported_tidy$status)
+reported_tidy$status<-factor(reported_tidy$status, ordered = TRUE,levels =c("Active", "Recovered", "Deceased"))
+reported_tidy
+
+```
+
+
+
+
+
+
+\newpage
+## Data visualization
+
+```{r cases_vis}
+reported_tidy%>%
+  ggplot(aes(x=reported_date, y=number,fill=status))+
+  geom_bar(stat = "identity")+
+  theme_minimal()+
+  labs(title = "Case reported by day in Toronto, Canada", subtitle = "Confirmed and probable cases",
+       x="Date", y="Case count",
+       caption = str_c("Creared by: Mingkai Zhang for STA302/1002,U of T\n", "Source: Ontario Ministry of Health, Integrated Public Health Information System and CORES\n",date_daily[1,1]))+
+  theme(legend.title = element_blank(), legend.position = c(0.15,0.8))+
+  scale_x_date(labels = scales::date_format("%d %b %y"),
+               limits=c(date("2020-01-01"),Sys.Date()))+
+  scale_y_continuous(limits = c(0,2000))+
+  scale_fill_manual(values = c("#003F5C","#86BCB6","#B9CA5D"), breaks = c("Active","Recovered","Deceased"))
+```
+
+
+
+\newpage
+# Task 2: Outbreak type
+## Data wrangling
+
+```{r}
+outbreak_raw <- read_excel("Desktop/CityofToronto_COVID-19_Daily_Public_Reporting.xlsx", sheet = 3) %>% 
+  clean_names()
+```
+
+
+```{r}
+outbreak<-outbreak_raw
+  #mutate_if(is.numeric, replace_na, replace = 0)#replace all missing values
+outbreak$episode_week=date(outbreak$episode_week)
+#the data is currently tidy
+outbreak$outbreak_or_sporadic=str_replace_all(outbreak$outbreak_or_sporadic,"OB Associated","Outbreak associated")
+total<-summarise(group_by(outbreak,episode_week), total_cases=sum(cases))
+outbreak<-left_join(outbreak,total,by="episode_week")
+outbreak$outbreak_or_sporadic<-factor(outbreak$outbreak_or_sporadic, ordered = TRUE, levels = c("Sporadic","Outbreak associated"))
+outbreak
+
+
+
+```
+
+\newpage
+## Data visualization
+
+```{r}
+outbreak%>%
+  ggplot(aes(x=episode_week, y=cases,fill=outbreak_or_sporadic))+
+  geom_bar(stat = "identity")+
+  theme_minimal()+
+  labs(title = "Cases by outbreak type and week in Toronto, Canada", subtitle = "Confirmed and probable cases",
+       x="Date", y="Case count",
+       caption = str_c("Creared by: Mingkai Zhang for STA302/1002,U of T\n", "Source: Ontario Ministry of Health, Integrated Public Health Information System and CORES\n",date_daily[1,1]))+
+  theme(legend.title = element_blank(), legend.position = c(0.15,0.8))+
+  scale_x_date(labels = scales::date_format("%d %b %y"),
+               limits=c(date("2020-01-01"),Sys.Date()+7))+
+  scale_y_continuous(limits = c(0,6000))+
+  scale_fill_manual(values = c("#86BCB6","#B9CA5D"), breaks = c("Sporadic","Outbreak associated"))
+```
+
+
+
+\newpage
+# Task 3: Neighbourhoods
+## Data wrangling: part 1
+
+```{r}
+
+```
+
+
+
+
+
+
+
+
+
+
+
